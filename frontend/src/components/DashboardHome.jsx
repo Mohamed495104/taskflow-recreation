@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { request, gql } from 'graphql-request';
 
-const endpoint = process.env.REACT_APP_API_URL || 'https://taskflow-recreation.vercel.app/graphql';
+const endpoint = process.env.REACT_APP_API_URL || 'https://taskflow-recreation-jm9j.vercel.app/graphql';
 
 const GET_TASKS = gql`
   query Tasks($status: String, $searchTerm: String) {
