@@ -10,7 +10,7 @@ const app = express();
 
 
 const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:3000',
+  process.env.FRONTEND_URL || 'http://localhost:3000', 'https://taskflow-recreation.vercel.app'
   'http://localhost:5173',
 ];
 
