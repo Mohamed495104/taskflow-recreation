@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { request, gql } from 'graphql-request';
 
-const endpoint = 'http://localhost:5000/graphql';
+const endpoint = process.env.REACT_APP_API_URL || 'http://localhost:5000/graphql';
 
 const GET_TASKS = gql`
   query Tasks($status: String, $searchTerm: String) {
