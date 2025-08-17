@@ -8,7 +8,6 @@ const mongoose = require('mongoose');
 // Create Express Server
 const app = express();
 
-// Allowed Origins
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:3000',
   'https://taskflow-recreation.vercel.app',
@@ -31,8 +30,8 @@ app.use(express.json());
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('✅ MongoDB connected'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
 // Test Route
 app.get('/', (req, res) => res.send('Server is running'));
@@ -70,7 +69,6 @@ const schema = buildSchema(`
   }
 `);
 
-// GraphQL Resolvers
 const root = {
   tasks: async ({ status, searchTerm }) => {
     try {
@@ -83,16 +81,18 @@ const root = {
         ];
       }
       const tasks = await Task.find(query);
-      return tasks.map(task => ({
-        id: task._id.toString(),
-        title: task.title,
-        description: task.description,
-        status: task.status,
-        dueDate: task.dueDate,
-        priority: task.priority,
-        createdAt: task.createdAt?.toISOString(),
-        updatedAt: task.updatedAt?.toISOString(),
-      }));
+      return tasks
+        .filter(task => task.dueDate)
+        .map(task => ({
+          id: task._id.toString(),
+          title: task.title || '',
+          description: task.description || '',
+          status: task.status || 'Pending',
+          dueDate: task.dueDate,
+          priority: task.priority || 'Medium',
+          createdAt: task.createdAt?.toISOString(),
+          updatedAt: task.updatedAt?.toISOString(),
+        }));
     } catch (err) {
       console.error('Error in tasks resolver:', err);
       throw new Error('Failed to fetch tasks');
@@ -126,7 +126,9 @@ const root = {
         { title, description, status, dueDate, priority },
         { new: true }
       );
-      if (!task) throw new Error('Task not found');
+      if (!task) {
+        throw new Error('Task not found');
+      }
       return {
         id: task._id.toString(),
         title: task.title,
@@ -146,7 +148,9 @@ const root = {
   deleteTask: async ({ id }) => {
     try {
       const deletedTask = await Task.findByIdAndDelete(id);
-      if (!deletedTask) throw new Error('Task not found');
+      if (!deletedTask) {
+        throw new Error('Task not found');
+      }
       return {
         id: deletedTask._id.toString(),
         title: deletedTask.title,
@@ -164,16 +168,20 @@ const root = {
   },
 };
 
-// ✅ Mount GraphQL differently for Vercel vs Local
+// GraphQL Endpoint
 if (process.env.VERCEL === '1') {
-  // Vercel will serve this at /api/graphql
+  // Vercel function path already = /api/graphql
   app.use('/', graphqlHTTP({ schema, rootValue: root, graphiql: true }));
 } else {
-  // Local dev runs at /graphql
+  // Local dev
   app.use('/graphql', graphqlHTTP({ schema, rootValue: root, graphiql: true }));
+}
+
+// Start local only
+if (process.env.VERCEL !== '1') {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
-    console.log(`🚀 Local server running at http://localhost:${PORT}/graphql`);
+    console.log(`🚀 Server running at http://localhost:${PORT}/graphql`);
   });
 }
 
