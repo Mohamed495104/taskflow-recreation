@@ -175,14 +175,13 @@ app.use('/graphql', graphqlHTTP({
   graphiql: true,
 }));
 
-// Start Server locally only
+// Start local only
 if (process.env.VERCEL !== '1') {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
-    console.log(`Server ready at http://localhost:${PORT}`);
-    console.log(`GraphQL endpoint: http://localhost:${PORT}/graphql`);
+    console.log(`🚀 Server running at http://localhost:${PORT}/graphql`);
   });
 }
 
-// Export the app for serverless
-module.exports = app;
+module.exports = app; 
+
