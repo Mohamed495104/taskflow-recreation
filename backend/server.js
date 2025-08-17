@@ -28,13 +28,33 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// MongoDB Connection with serverless optimization
+let isConnected = false;
+
+const connectToDatabase = async () => {
+  if (isConnected && mongoose.connection.readyState === 1) {
+    return;
+  }
+  
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      maxPoolSize: 1, // Limit connection pool for serverless
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    isConnected = true;
+    console.log('MongoDB connected');
+  } catch (err) {
+    console.error('MongoDB connection error:', err);
+    isConnected = false;
+    throw err;
+  }
+};
 
 // Test Route
-app.get('/', (req, res) => res.send('Server is running'));
+app.get('/', (req, res) => res.send('GraphQL Server is running'));
 
 // Define Mongoose Schema
 const TaskSchema = new mongoose.Schema({
@@ -45,7 +65,8 @@ const TaskSchema = new mongoose.Schema({
   priority: { type: String, required: true, enum: ['Low', 'Medium', 'High'], default: 'Medium' },
 }, { timestamps: true });
 
-const Task = mongoose.model('Task', TaskSchema);
+// Prevent model re-compilation in serverless environment
+const Task = mongoose.models.Task || mongoose.model('Task', TaskSchema);
 
 // GraphQL Schema
 const schema = buildSchema(`
@@ -72,6 +93,7 @@ const schema = buildSchema(`
 const root = {
   tasks: async ({ status, searchTerm }) => {
     try {
+      await connectToDatabase();
       let query = {};
       if (status && status !== 'All') query.status = status;
       if (searchTerm) {
@@ -101,6 +123,7 @@ const root = {
 
   addTask: async ({ title, description, status, dueDate, priority }) => {
     try {
+      await connectToDatabase();
       const task = new Task({ title, description, status, dueDate, priority });
       const savedTask = await task.save();
       return {
@@ -121,6 +144,7 @@ const root = {
 
   updateTask: async ({ id, title, description, status, dueDate, priority }) => {
     try {
+      await connectToDatabase();
       const task = await Task.findByIdAndUpdate(
         id,
         { title, description, status, dueDate, priority },
@@ -147,6 +171,7 @@ const root = {
 
   deleteTask: async ({ id }) => {
     try {
+      await connectToDatabase();
       const deletedTask = await Task.findByIdAndDelete(id);
       if (!deletedTask) {
         throw new Error('Task not found');
@@ -168,20 +193,27 @@ const root = {
   },
 };
 
-// GraphQL Endpoint
-if (process.env.VERCEL === '1') {
-  // Vercel function path already = /api/graphql
-  app.use('/', graphqlHTTP({ schema, rootValue: root, graphiql: true }));
-} else {
-  // Local dev
-  app.use('/graphql', graphqlHTTP({ schema, rootValue: root, graphiql: true }));
-}
+// GraphQL middleware
+const graphqlMiddleware = graphqlHTTP(async (req) => {
+  await connectToDatabase();
+  return {
+    schema,
+    rootValue: root,
+    graphiql: true,
+  };
+});
 
-// Start local only
-if (process.env.VERCEL !== '1') {
+// GraphQL Endpoint - simplified routing
+app.use('/graphql', graphqlMiddleware);
+app.use('/', graphqlMiddleware); // This will handle the root path for Vercel
+
+// Only start server locally
+if (require.main === module) {
   const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running at http://localhost:${PORT}/graphql`);
+  connectToDatabase().then(() => {
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running at http://localhost:${PORT}/graphql`);
+    });
   });
 }
 
