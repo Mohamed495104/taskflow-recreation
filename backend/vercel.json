@@ -4,6 +4,7 @@
     { "src": "api/**/*.js", "use": "@vercel/node" }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" }
+    { "src": "/api/graphql", "dest": "/api/graphql" },
+    { "src": "/(.*)", "dest": "/api/graphql" }
   ]
 }
