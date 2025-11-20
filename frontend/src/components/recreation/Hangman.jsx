@@ -1,8 +1,49 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, Button, Badge, Row, Col } from 'react-bootstrap';
 import { useRecreationStats } from '../../contexts/RecreationStatsContext';
-import { db, auth } from '../../firebaseConfig';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { request, gql } from 'graphql-request';
+import { auth } from '../../firebaseConfig';
+
+const endpoint = import.meta.env.VITE_API_URL || 'https://taskflow-recreation-jm9j.vercel.app/graphql';
+
+const LOG_HANGMAN_GAME = gql`
+  mutation LogHangmanGame(
+    $userId: String!
+    $word: String!
+    $category: String!
+    $hint: String
+    $result: String!
+    $hintUsed: Boolean!
+    $wrongGuesses: Int!
+    $totalGuesses: Int!
+    $timeElapsed: Int
+    $timeRemaining: Int
+    $score: Int!
+    $difficulty: String
+  ) {
+    logHangmanGame(
+      userId: $userId
+      word: $word
+      category: $category
+      hint: $hint
+      result: $result
+      hintUsed: $hintUsed
+      wrongGuesses: $wrongGuesses
+      totalGuesses: $totalGuesses
+      timeElapsed: $timeElapsed
+      timeRemaining: $timeRemaining
+      score: $score
+      difficulty: $difficulty
+    ) {
+      id
+      userId
+      result
+      score
+      finishedAt
+    }
+  }
+`;
+
 
 const WORDS_WITH_HINTS = [
   { word: 'REACT', hint: 'Popular JavaScript library for building user interfaces', category: 'Technology' },
@@ -105,22 +146,20 @@ const Hangman = () => {
     return () => clearInterval(interval);
   }, [gameActive, timeLeft, gameOver]);
 
-  // Log game to Firestore
+  // Log game to MongoDB via GraphQL
   const logHangmanGame = useCallback(async (gameResult) => {
     // Check prerequisites
-    if (!ready || !uid || !auth.currentUser || !db) {
+    if (!ready || !uid || !auth.currentUser) {
       return;
     }
 
     try {
-      const gameData = {
-        uid: uid,
-        authUid: auth.currentUser.uid,
-        sessionId: sessionId,
+      await request(endpoint, LOG_HANGMAN_GAME, {
+        userId: uid,
         word: currentWordData.word,
         category: currentWordData.category,
         hint: currentWordData.hint,
-        result: gameResult, 
+        result: gameResult,
         hintUsed: showHint,
         wrongGuesses: wrongGuesses,
         totalGuesses: guessed.size,
@@ -128,18 +167,11 @@ const Hangman = () => {
         timeRemaining: timeLeft,
         score: calculateScore(gameResult),
         difficulty: getDifficulty(),
-        finishedAt: serverTimestamp(),
-        createdAt: serverTimestamp(),
-        userAgent: navigator.userAgent,
-        timestamp: new Date().toISOString()
-      };
-
-      await addDoc(collection(db, 'hangmanGames'), gameData);
-      
+      });
     } catch (error) {
-      console.error('Firestore save error:', error);
+      console.error('Game log error:', error);
     }
-  }, [ready, uid, sessionId, currentWordData.word, currentWordData.category, currentWordData.hint, showHint, wrongGuesses, guessed.size, gameStartTime, timeLeft, calculateScore, getDifficulty]);
+  }, [ready, uid, currentWordData.word, currentWordData.category, currentWordData.hint, showHint, wrongGuesses, guessed.size, gameStartTime, timeLeft, calculateScore, getDifficulty]);
 
   const finishGame = useCallback(async (result) => {
     if (!guardOnce()) return;

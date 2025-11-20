@@ -1,8 +1,24 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { Button, Form, Dropdown, ButtonGroup, Badge } from 'react-bootstrap';
 import { useRecreationStats } from '../../contexts/RecreationStatsContext';
-import { db, auth } from '../../firebaseConfig';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { request, gql } from 'graphql-request';
+import { auth } from '../../firebaseConfig';
+
+const endpoint = import.meta.env.VITE_API_URL || 'https://taskflow-recreation-jm9j.vercel.app/graphql';
+
+const LOG_TICTACTOE_MATCH = gql`
+  mutation LogTicTacToeMatch($userId: String!, $xName: String, $oName: String, $winner: String!, $mode: String!) {
+    logTicTacToeMatch(userId: $userId, xName: $xName, oName: $oName, winner: $winner, mode: $mode) {
+      id
+      userId
+      xName
+      oName
+      winner
+      mode
+      finishedAt
+    }
+  }
+`;
 
 export default function TicTacToe() {
   const { incrementWins } = useRecreationStats();
@@ -110,16 +126,15 @@ export default function TicTacToe() {
     return cpuNormal(b);
   }, [difficulty, cpuEasy, cpuNormal, cpuHard]);
 
-  // Firestore log (2‑player only) 
+  // GraphQL log (2-player only) 
   const logLocalMatch = useCallback(async (result) => {
     if (isCpu || !namesLocked) return;
     try {
-      await addDoc(collection(db, 'tictactoeMatches'), {
-        uid: auth.currentUser?.uid ?? null,
+      await request(endpoint, LOG_TICTACTOE_MATCH, {
+        userId: auth.currentUser?.uid ?? 'anonymous',
         xName: xName.trim() || 'Player X',
         oName: oName.trim() || 'Player O',
-        winner: result,               
-        finishedAt: serverTimestamp(),
+        winner: result,
         mode: 'local-2p',
       });
     } catch (e) {
