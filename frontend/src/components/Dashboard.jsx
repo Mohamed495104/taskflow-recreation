@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { request, gql } from 'graphql-request';
 
-const endpoint = process.env.REACT_APP_API_URL || 'https://taskflow-recreation-jm9j.vercel.app/graphql';
+const endpoint = import.meta.env.VITE_API_URL || 'https://taskflow-recreation-jm9j.vercel.app/graphql';
 
 const GET_TASKS = gql`
   query Tasks($status: String, $searchTerm: String) {
@@ -112,36 +112,6 @@ const Dashboard = () => {
             </Nav.Item>
 
           </Nav>
-
-          <div className="sidebar-section mt-4">
-            <div className="sidebar-section-header d-flex justify-content-between align-items-center">
-              <span>Channels</span>
-              <Button variant="link" size="sm" className="text-muted p-0" aria-label="Add Channel">
-                <i className="bi bi-plus-lg"></i>
-              </Button>
-            </div>
-            <Nav className="sidebar-nav">
-              <Nav.Item>
-                <Nav.Link className="sidebar-nav-link">
-                  <span className="channel-hash">#</span>
-                  general
-                </Nav.Link>
-              </Nav.Item>
-              <Nav.Item>
-                <Nav.Link className="sidebar-nav-link">
-                  <span className="channel-hash">#</span>
-                  development
-                  <Badge bg="success" className="ms-auto">2</Badge>
-                </Nav.Link>
-              </Nav.Item>
-              <Nav.Item>
-                <Nav.Link className="sidebar-nav-link">
-                  <span className="channel-hash">#</span>
-                  design
-                </Nav.Link>
-              </Nav.Item>
-            </Nav>
-          </div>
 
           <div className="sidebar-section mt-auto">
             <div className="sidebar-logout">

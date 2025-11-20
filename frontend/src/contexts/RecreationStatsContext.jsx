@@ -7,16 +7,35 @@ import React, {
   useState,
 } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  onSnapshot,
-  increment as fbIncrement,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { db, auth } from '../firebaseConfig';
+import { request, gql } from 'graphql-request';
+import { auth } from '../firebaseConfig';
+
+const endpoint = import.meta.env.VITE_API_URL || 'https://taskflow-recreation-jm9j.vercel.app/graphql';
+
+// GraphQL queries and mutations
+const GET_RECREATION_STATS = gql`
+  query GetRecreationStats($userId: String!, $gameKey: String!) {
+    recreationStats(userId: $userId, gameKey: $gameKey) {
+      id
+      userId
+      gameKey
+      wins
+      lastUpdated
+    }
+  }
+`;
+
+const INCREMENT_WINS = gql`
+  mutation IncrementWins($userId: String!, $gameKey: String!) {
+    incrementWins(userId: $userId, gameKey: $gameKey) {
+      id
+      userId
+      gameKey
+      wins
+      lastUpdated
+    }
+  }
+`;
 
 const RecreationStatsContext = createContext(null);
 
@@ -35,35 +54,14 @@ export function RecreationStatsProvider({ children }) {
     return () => unsub();
   }, []);
 
-  
-  const userGameDocRef = useCallback(
-    (gameKey) => (uid ? doc(db, 'users', uid, 'recreationStats', gameKey) : null),
-    [uid]
-  );
-
-  // Ensure the per-game doc exists
-  const ensureDoc = useCallback(
-    async (gameKey) => {
-      const ref = userGameDocRef(gameKey);
-      if (!ref) throw new Error('User not authenticated');
-      const snap = await getDoc(ref);
-      if (!snap.exists()) {
-        await setDoc(ref, { wins: 0, lastUpdated: serverTimestamp() }, { merge: true });
-        return { wins: 0 };
-      }
-      return snap.data();
-    },
-    [userGameDocRef]
-  );
-
-  // Read wins 
+  // Read wins from MongoDB via GraphQL
   const getWins = useCallback(
     async (gameKey) => {
       if (!uid) return 0;
       if (winsCache[gameKey] !== undefined) return winsCache[gameKey];
       try {
-        const data = await ensureDoc(gameKey);
-        const wins = Number(data?.wins ?? 0);
+        const data = await request(endpoint, GET_RECREATION_STATS, { userId: uid, gameKey });
+        const wins = Number(data?.recreationStats?.wins ?? 0);
         setWinsCache((prev) => ({ ...prev, [gameKey]: wins }));
         return wins;
       } catch (err) {
@@ -71,48 +69,52 @@ export function RecreationStatsProvider({ children }) {
         return 0;
       }
     },
-    [uid, winsCache, ensureDoc]
+    [uid, winsCache]
   );
 
-  // Increment wins
+  // Increment wins via GraphQL
   const incrementWins = useCallback(
     async (gameKey) => {
       if (!uid) return;
-      const ref = userGameDocRef(gameKey);
-      if (!ref) return;
       try {
-        await ensureDoc(gameKey); // create if missing
-        await updateDoc(ref, { wins: fbIncrement(1), lastUpdated: serverTimestamp() });
+        const data = await request(endpoint, INCREMENT_WINS, { userId: uid, gameKey });
+        const wins = Number(data?.incrementWins?.wins ?? 0);
         setWinsCache((prev) => ({
           ...prev,
-          [gameKey]: Number(prev[gameKey] ?? 0) + 1,
+          [gameKey]: wins,
         }));
       } catch (err) {
         console.error('incrementWins error:', err);
       }
     },
-    [uid, userGameDocRef, ensureDoc]
+    [uid]
   );
 
-  // Realtime wins listener
+  // Polling-based listener (replaces Firestore onSnapshot)
   const listenWins = useCallback(
     (gameKey, cb) => {
-      const ref = userGameDocRef(gameKey);
-      if (!ref) return () => {};
+      if (!uid) return () => {};
       
-      ensureDoc(gameKey).catch(() => {});
-      const unsub = onSnapshot(
-        ref,
-        (snap) => {
-          const wins = Number(snap.data()?.wins ?? 0);
+      // Poll every 10 seconds
+      const pollInterval = setInterval(async () => {
+        try {
+          const data = await request(endpoint, GET_RECREATION_STATS, { userId: uid, gameKey });
+          const wins = Number(data?.recreationStats?.wins ?? 0);
           setWinsCache((prev) => ({ ...prev, [gameKey]: wins }));
           if (typeof cb === 'function') cb(wins);
-        },
-        (err) => console.error('listenWins error:', err)
-      );
-      return unsub;
+        } catch (err) {
+          console.error('listenWins error:', err);
+        }
+      }, 10000);
+      
+      // Initial fetch
+      getWins(gameKey).then((wins) => {
+        if (typeof cb === 'function') cb(wins);
+      });
+      
+      return () => clearInterval(pollInterval);
     },
-    [userGameDocRef, ensureDoc]
+    [uid, getWins]
   );
 
   const value = useMemo(

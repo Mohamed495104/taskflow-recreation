@@ -40,15 +40,37 @@ A full-stack web application that combines professional task management with an 
 
 ## ⚙️ Installation & Setup
 
+### Quick Start (Local Development)
+
+For detailed local development setup, see **[LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md)**
+
+**TL;DR:**
+```bash
+# Backend
+cd backend
+npm install
+cp .env.example .env
+# Edit .env and add your MONGO_URI
+npm start
+
+# Frontend (in new terminal)
+cd frontend
+npm install
+cp .env.local .env
+npm run dev
+```
+
+---
+
 ### Prerequisites
-- Node.js (v16 or higher)
-- MongoDB database
-- Firebase project with Authentication and Firestore enabled
+- Node.js (v20 or higher)
+- MongoDB database (local or Atlas)
+- Firebase project with Authentication enabled (Firestore not needed)
 
 ### 1️⃣ Clone the Repository
 ```bash
-git clone https://github.com/Swedha-P/TaskFlow-Group-project-Sem3.git
-cd Task-Manager-Recreation-App
+git clone https://github.com/Mohamed495104/taskflow-recreation.git
+cd taskflow-recreation
 ```
 
 ### 2️⃣ Backend Setup
@@ -57,10 +79,16 @@ cd backend
 npm install
 ```
 
-Create a `.env` file in the `backend/` directory:
+Create a `.env` file (copy from example):
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and add your MongoDB connection string:
 ```env
 PORT=5000
 MONGO_URI=your_mongodb_connection_string
+FRONTEND_URL=http://localhost:5173
 ```
 
 Start the backend server:
@@ -68,24 +96,70 @@ Start the backend server:
 npm start
 ```
 
+Backend runs at: `http://localhost:5000/graphql`
+
 ### 3️⃣ Frontend Setup
 ```bash
-cd ../frontend
+cd frontend
 npm install
 ```
 
-Create `firebaseConfig.js` in the `src/` directory with your Firebase credentials:
-```javascript
-// firebaseConfig.js
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+Create a `.env` file for local development:
+```bash
+cp .env.local .env
+```
 
-const firebaseConfig = {
-  // Your Firebase config object
-  apiKey: "your-api-key",
-  authDomain: "your-auth-domain",
-  projectId: "your-project-id",
+The `.env.local` file is pre-configured for local development. If you want to use your own Firebase project, edit the `.env` file with your Firebase credentials.
+
+Start the frontend:
+```bash
+npm run dev
+```
+
+Frontend runs at: `http://localhost:5173`
+
+### 4️⃣ Verify Setup
+
+1. Backend GraphQL Playground: http://localhost:5000/graphql
+2. Frontend Application: http://localhost:5173
+3. Try signing up and creating tasks
+
+---
+
+## 📚 Documentation
+
+- **[LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md)** - Detailed local setup guide
+- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Production deployment instructions
+- **[DATABASE_MIGRATION_ANALYSIS.md](DATABASE_MIGRATION_ANALYSIS.md)** - Database architecture
+- **[MIGRATION_COMPLETE.md](MIGRATION_COMPLETE.md)** - Implementation summary
+
+---
+
+## 🚨 Troubleshooting
+
+### CORS Error
+If you see: `Access to fetch at 'https://your-backend.vercel.app/graphql' has been blocked by CORS`
+
+**Solution:** You're using the `.env.example` placeholder. Create a `.env` file:
+```bash
+cd frontend
+cp .env.local .env
+```
+
+This sets `VITE_API_URL=http://localhost:5000/graphql` for local development.
+
+### Backend Connection Error
+If backend can't connect to MongoDB:
+- Check your `MONGO_URI` in `backend/.env`
+- For local MongoDB: `mongodb://localhost:27017/taskflow`
+- For MongoDB Atlas: Get connection string from Atlas dashboard
+
+### Port Already in Use
+If port 5000 or 5173 is already in use:
+- Backend: Change `PORT` in `backend/.env`
+- Frontend: Vite will automatically try other ports
+
+For more help, see **[LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md)**
   storageBucket: "your-storage-bucket",
   messagingSenderId: "your-messaging-sender-id",
   appId: "your-app-id"
