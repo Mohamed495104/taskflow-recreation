@@ -7,6 +7,8 @@ const mongoose = require('mongoose');
 const rateLimit = require('express-rate-limit');
 const validator = require('validator');
 const sanitize = require('mongo-sanitize');
+const app = express();
+app.set("trust proxy", 1);  
 
 // Create Express Server
 const app = express();
