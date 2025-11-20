@@ -3,7 +3,7 @@ import { Button, Form, Dropdown, ButtonGroup, Badge } from 'react-bootstrap';
 import { useRecreationStats } from '../../contexts/RecreationStatsContext';
 import { request, gql } from 'graphql-request';
 import { auth } from '../../firebaseConfig';
-import { API_ENDPOINT } from '../config';
+import { API_ENDPOINT } from '../../config';
 
 
 const LOG_TICTACTOE_MATCH = gql`
