@@ -9,8 +9,8 @@ import React, {
 import { onAuthStateChanged } from 'firebase/auth';
 import { request, gql } from 'graphql-request';
 import { auth } from '../firebaseConfig';
+import { API_ENDPOINT } from '../config';
 
-const endpoint = import.meta.env.VITE_API_URL || 'https://taskflow-recreation-jm9j.vercel.app/graphql';
 
 // GraphQL queries and mutations
 const GET_RECREATION_STATS = gql`
@@ -60,7 +60,7 @@ export function RecreationStatsProvider({ children }) {
       if (!uid) return 0;
       if (winsCache[gameKey] !== undefined) return winsCache[gameKey];
       try {
-        const data = await request(endpoint, GET_RECREATION_STATS, { userId: uid, gameKey });
+        const data = await request(API_ENDPOINT, GET_RECREATION_STATS, { userId: uid, gameKey });
         const wins = Number(data?.recreationStats?.wins ?? 0);
         setWinsCache((prev) => ({ ...prev, [gameKey]: wins }));
         return wins;
@@ -77,7 +77,7 @@ export function RecreationStatsProvider({ children }) {
     async (gameKey) => {
       if (!uid) return;
       try {
-        const data = await request(endpoint, INCREMENT_WINS, { userId: uid, gameKey });
+        const data = await requestAPI_ENDPOINT, INCREMENT_WINS, { userId: uid, gameKey });
         const wins = Number(data?.incrementWins?.wins ?? 0);
         setWinsCache((prev) => ({
           ...prev,
@@ -98,7 +98,7 @@ export function RecreationStatsProvider({ children }) {
       // Poll every 10 seconds
       const pollInterval = setInterval(async () => {
         try {
-          const data = await request(endpoint, GET_RECREATION_STATS, { userId: uid, gameKey });
+          const data = await request(API_ENDPOINT, GET_RECREATION_STATS, { userId: uid, gameKey });
           const wins = Number(data?.recreationStats?.wins ?? 0);
           setWinsCache((prev) => ({ ...prev, [gameKey]: wins }));
           if (typeof cb === 'function') cb(wins);
