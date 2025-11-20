@@ -3,8 +3,8 @@ import { Card, Button, Badge, Row, Col } from 'react-bootstrap';
 import { useRecreationStats } from '../../contexts/RecreationStatsContext';
 import { request, gql } from 'graphql-request';
 import { auth } from '../../firebaseConfig';
+import { API_ENDPOINT } from '../config';
 
-const endpoint = import.meta.env.VITE_API_URL || 'https://taskflow-recreation-jm9j.vercel.app/graphql';
 
 const LOG_HANGMAN_GAME = gql`
   mutation LogHangmanGame(
@@ -154,7 +154,7 @@ const Hangman = () => {
     }
 
     try {
-      await request(endpoint, LOG_HANGMAN_GAME, {
+      await request(API_ENDPOINT, LOG_HANGMAN_GAME, {
         userId: uid,
         word: currentWordData.word,
         category: currentWordData.category,
