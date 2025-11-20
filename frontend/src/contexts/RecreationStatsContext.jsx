@@ -11,7 +11,6 @@ import { request, gql } from 'graphql-request';
 import { auth } from '../firebaseConfig';
 import { API_ENDPOINT } from '../config';
 
-
 // GraphQL queries and mutations
 const GET_RECREATION_STATS = gql`
   query GetRecreationStats($userId: String!, $gameKey: String!) {
@@ -41,10 +40,10 @@ const RecreationStatsContext = createContext(null);
 
 export function RecreationStatsProvider({ children }) {
   const [uid, setUid] = useState(null);
-  const [winsCache, setWinsCache] = useState({}); 
+  const [winsCache, setWinsCache] = useState({});
   const [ready, setReady] = useState(false);
 
-  // Auth state
+  // Auth state listener
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
       setUid(user ? user.uid : null);
@@ -54,13 +53,18 @@ export function RecreationStatsProvider({ children }) {
     return () => unsub();
   }, []);
 
-  // Read wins from MongoDB via GraphQL
+  // Fetch wins
   const getWins = useCallback(
     async (gameKey) => {
       if (!uid) return 0;
       if (winsCache[gameKey] !== undefined) return winsCache[gameKey];
+
       try {
-        const data = await request(API_ENDPOINT, GET_RECREATION_STATS, { userId: uid, gameKey });
+        const data = await request(API_ENDPOINT, GET_RECREATION_STATS, {
+          userId: uid,
+          gameKey,
+        });
+
         const wins = Number(data?.recreationStats?.wins ?? 0);
         setWinsCache((prev) => ({ ...prev, [gameKey]: wins }));
         return wins;
@@ -72,13 +76,19 @@ export function RecreationStatsProvider({ children }) {
     [uid, winsCache]
   );
 
-  // Increment wins via GraphQL
+  // Increment wins
   const incrementWins = useCallback(
     async (gameKey) => {
       if (!uid) return;
+
       try {
-        const data = await requestAPI_ENDPOINT, INCREMENT_WINS, { userId: uid, gameKey });
+        const data = await request(API_ENDPOINT, INCREMENT_WINS, {
+          userId: uid,
+          gameKey,
+        });
+
         const wins = Number(data?.incrementWins?.wins ?? 0);
+
         setWinsCache((prev) => ({
           ...prev,
           [gameKey]: wins,
@@ -90,35 +100,45 @@ export function RecreationStatsProvider({ children }) {
     [uid]
   );
 
-  // Polling-based listener (replaces Firestore onSnapshot)
+  // Polling listener
   const listenWins = useCallback(
     (gameKey, cb) => {
       if (!uid) return () => {};
-      
-      // Poll every 10 seconds
-      const pollInterval = setInterval(async () => {
+
+      const poll = setInterval(async () => {
         try {
-          const data = await request(API_ENDPOINT, GET_RECREATION_STATS, { userId: uid, gameKey });
+          const data = await request(API_ENDPOINT, GET_RECREATION_STATS, {
+            userId: uid,
+            gameKey,
+          });
+
           const wins = Number(data?.recreationStats?.wins ?? 0);
+
           setWinsCache((prev) => ({ ...prev, [gameKey]: wins }));
           if (typeof cb === 'function') cb(wins);
         } catch (err) {
           console.error('listenWins error:', err);
         }
       }, 10000);
-      
+
       // Initial fetch
       getWins(gameKey).then((wins) => {
         if (typeof cb === 'function') cb(wins);
       });
-      
-      return () => clearInterval(pollInterval);
+
+      return () => clearInterval(poll);
     },
     [uid, getWins]
   );
 
   const value = useMemo(
-    () => ({ ready, uid, getWins, incrementWins, listenWins }),
+    () => ({
+      ready,
+      uid,
+      getWins,
+      incrementWins,
+      listenWins,
+    }),
     [ready, uid, getWins, incrementWins, listenWins]
   );
 
