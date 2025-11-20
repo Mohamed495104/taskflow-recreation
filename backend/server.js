@@ -23,23 +23,28 @@ const limiter = rateLimit({
 });
 
 const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:3000',
-  'https://taskflow-recreation.vercel.app',
-  'http://localhost:5173',
+  "http://localhost:5173",
+  "https://taskflow-recreation.vercel.app/",
+  "https://taskflow-recreation.onrender.com"
 ];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (Render, Postman, server-to-server)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn("CORS blocked origin:", origin);
+        callback(null, false); // DO NOT throw error
+      }
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
 // MongoDB Connection with serverless optimization
