@@ -8,7 +8,7 @@ frontend/.env
 .env
 .env.local
 .env.*.local
-
+frontend/node_modules/
 # Build output
 frontend/dist/
 backend/dist/
