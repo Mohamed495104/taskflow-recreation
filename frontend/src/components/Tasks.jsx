@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Badge, Form, Modal, ProgressBar } from 'react-bootstrap';
 import { request, gql } from 'graphql-request';
 import TaskList from './TaskList';
-import { API_ENDPOINT } from '../config';
+
+const endpoint = import.meta.env.VITE_API_URL || 'https://taskflow-recreation-ldag.vercel.app/graphql';
 
 const GET_TASKS = gql`
   query Tasks($status: String, $searchTerm: String) {
@@ -88,7 +89,7 @@ const Tasks = () => {
       try {
         const variables = { status: filterStatus, searchTerm: searchTerm || undefined };
         if (filterStatus === 'All') delete variables.status;
-        const data = await request(API_ENDPOINT, GET_TASKS, variables);
+        const data = await request(endpoint, GET_TASKS, variables);
         setTasks(data.tasks || []);
       } catch (error) {
         console.error('Error fetching tasks:', error);
