@@ -5,7 +5,7 @@ node_modules/
 .env
 .env.local
 .env.*.local
-
+backend/serviceAccount.json
 # Logs
 logs
 *.log
