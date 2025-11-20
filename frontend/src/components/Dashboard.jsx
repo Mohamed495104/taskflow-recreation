@@ -3,8 +3,8 @@ import { Nav, Badge, Button } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { request, gql } from 'graphql-request';
+import { API_ENDPOINT } from '../config';
 
-const endpoint = import.meta.env.VITE_API_URL || 'https://taskflow-recreation-jm9j.vercel.app/graphql';
 
 const GET_TASKS = gql`
   query Tasks($status: String, $searchTerm: String) {
@@ -31,7 +31,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        const data = await request(endpoint, GET_TASKS, { status: 'All' });
+        const data = await request(API_ENDPOINT, GET_TASKS, { status: 'All' });
         setTasks(data.tasks || []);
       } catch (error) {
         console.error('Error fetching tasks:', error);
